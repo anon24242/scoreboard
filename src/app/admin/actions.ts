@@ -11,14 +11,16 @@ const numberSchema = z.preprocess(
     .nonnegative('Must be a positive number')
 );
 
+const wicketsSchema = numberSchema.max(10, 'Wickets cannot exceed 10');
+
 const MatchFormSchema = z.object({
   teamAName: z.string().min(1, 'Team A name is required'),
   teamAScore: numberSchema,
-  teamAWickets: numberSchema.max(10, 'Wickets cannot exceed 10'),
+  teamAWickets: wicketsSchema,
   teamAOvers: numberSchema,
   teamBName: z.string().min(1, 'Team B name is required'),
   teamBScore: numberSchema,
-  teamBWickets: numberSchema.max(10, 'Wickets cannot exceed 10'),
+  teamBWickets: wicketsSchema,
   teamBOvers: numberSchema,
   striker: z.string().min(1, 'Striker name is required'),
   nonStriker: z.string().min(1, 'Non-striker name is required'),
