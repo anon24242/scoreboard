@@ -3,6 +3,7 @@ import './globals.css';
 import { Header } from '@/components/header';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { cookies } from 'next/headers';
 
 export const metadata: Metadata = {
   title: 'Cricket Central',
@@ -14,6 +15,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = cookies();
+  const session = cookieStore.get('session')?.value;
+  const isLoggedIn = session === 'admin-logged-in';
+
   return (
     <html lang="en" className="dark">
       <head>
@@ -31,7 +36,7 @@ export default function RootLayout({
       <body
         className={cn('min-h-screen bg-background antialiased', 'font-body')}
       >
-        <Header />
+        {isLoggedIn ? <Header /> : null}
         <main>{children}</main>
         <Toaster />
       </body>

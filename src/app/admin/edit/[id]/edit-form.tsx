@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 const numberSchema = z.preprocess(
   (val) => (val === '' ? undefined : parseFloat(String(val))),
@@ -251,8 +252,7 @@ export function EditMatchForm({
                     A short summary of the current match situation.
                   </FormDescription>
                   <FormMessage />
-                </I
-                  </FormItem>
+                </FormItem>
               )}
             />
 
