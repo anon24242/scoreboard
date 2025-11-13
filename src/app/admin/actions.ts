@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { updateMatch, addMatch, getMatchById } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { generateMatchStatus } from '@/ai/flows/generate-match-status';
 
 const numberSchema = z.preprocess(
   (val) => (val === '' ? undefined : parseFloat(String(val))),
@@ -31,7 +30,7 @@ const MatchFormSchema = z.object({
   teamBScore: numberSchema,
   teamBWickets: wicketsSchema,
   teamBOvers: numberSchema,
-  status: z.string().optional(), // Status is now optional
+  status: z.string(),
 });
 
 export type State = {
@@ -89,17 +88,8 @@ export async function saveMatchData(prevState: State, formData: FormData) {
       wickets: data.teamBWickets,
       overs: data.teamBOvers,
     },
-    status: data.status || '',
+    status: data.status,
   };
-
-  // Generate status if it's empty
-  if (!matchPayload.status) {
-      matchPayload.status = await generateMatchStatus({
-          teamA: matchPayload.teamA,
-          teamB: matchPayload.teamB,
-      });
-  }
-
 
   try {
     if (data.id && data.id !== 'new') {
@@ -146,14 +136,6 @@ export async function liveUpdate(matchId: string, team: 'teamA' | 'teamB', field
   if (teamData.wickets < 0) teamData.wickets = 0;
   if (teamData.score < 0) teamData.score = 0;
   
-
-  const newStatus = await generateMatchStatus({
-    teamA: match.teamA,
-    teamB: match.teamB,
-  });
-
-  match.status = newStatus;
-
   await updateMatch(matchId, match);
 
   revalidatePath(`/admin/live/${matchId}`);
