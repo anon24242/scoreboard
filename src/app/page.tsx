@@ -1,6 +1,5 @@
 import { Scoreboard } from '@/components/scoreboard';
 import { getMatches } from '@/lib/db';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 export default async function Home() {
   const matches = await getMatches();
@@ -15,23 +14,11 @@ export default async function Home() {
 
   return (
      <div className="container mx-auto py-8">
-        <Carousel
-          opts={{
-            align: "start",
-            loop: true,
-          }}
-          className="mx-auto w-full max-w-4xl"
-        >
-          <CarouselContent>
-            {matches.map((match) => (
-              <CarouselItem key={match.id}>
-                <Scoreboard data={match} />
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
-        </Carousel>
+        <div className="mx-auto max-w-4xl space-y-4">
+          {matches.map((match) => (
+            <Scoreboard key={match.id} data={match} />
+          ))}
+        </div>
     </div>
   );
 }
