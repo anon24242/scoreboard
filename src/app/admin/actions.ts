@@ -2,7 +2,6 @@
 
 import { z } from 'zod';
 import { updateMatch, addMatch } from '@/lib/db';
-import type { MatchData } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -34,13 +33,43 @@ const MatchFormSchema = z.object({
   status: z.string().min(1, 'Status is required'),
 });
 
-export async function saveMatchData(formData: unknown) {
-  const validatedFields = MatchFormSchema.safeParse(formData);
+export type State = {
+  errors?: {
+    id?: string[];
+    teamAName?: string[];
+    teamAScore?: string[];
+    teamAWickets?: string[];
+    teamAOvers?: string[];
+    teamBName?: string[];
+    teamBScore?: string[];
+    teamBWickets?: string[];
+    teamBOvers?: string[];
+    status?: string[];
+    _form?: string[];
+  };
+  message?: string | null;
+};
+
+
+export async function saveMatchData(prevState: State, formData: FormData) {
+  const validatedFields = MatchFormSchema.safeParse({
+    id: formData.get('id'),
+    teamAName: formData.get('teamAName'),
+    teamAScore: formData.get('teamAScore'),
+    teamAWickets: formData.get('teamAWickets'),
+    teamAOvers: formData.get('teamAOvers'),
+    teamBName: formData.get('teamBName'),
+    teamBScore: formData.get('teamBScore'),
+    teamBWickets: formData.get('teamBWickets'),
+    teamBOvers: formData.get('teamBOvers'),
+    status: formData.get('status'),
+  });
 
   if (!validatedFields.success) {
     console.error('Validation Error:', validatedFields.error.flatten());
     return {
       errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Failed to save match data. Please check the form for errors.',
     };
   }
 
@@ -69,7 +98,10 @@ export async function saveMatchData(formData: unknown) {
       await addMatch(matchPayload);
     }
   } catch (error) {
-    return { errors: { _form: ['Failed to save match data.'] } };
+     return {
+      errors: { _form: ['Failed to save match data.'] },
+      message: 'Database Error: Failed to Save Match.',
+    };
   }
 
   revalidatePath('/admin');

@@ -1,23 +1,13 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { useActionState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { MatchData } from '@/lib/types';
-import { saveMatchData } from '../../actions';
+import { saveMatchData, type State } from '../../actions';
 import {
   Card,
   CardContent,
@@ -26,40 +16,16 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import { Label } from '@/components/ui/label';
 
-const numberSchema = z.preprocess(
-  (val) => (val === '' ? undefined : parseFloat(String(val))),
-  z
-    .number({ invalid_type_error: 'Must be a number' })
-    .nonnegative('Must be a positive number')
-    .optional()
-    .default(0)
-);
-
-const wicketsSchema = z.preprocess(
-  (val) => (val === '' ? undefined : parseFloat(String(val))),
-  z
-    .number({ invalid_type_error: 'Must be a number' })
-    .nonnegative('Must be a positive number')
-    .max(10, 'Wickets cannot exceed 10')
-    .optional()
-    .default(0)
-);
-
-const formSchema = z.object({
-  id: z.string().optional(),
-  teamAName: z.string().min(2, 'Name must be at least 2 characters.'),
-  teamAScore: numberSchema,
-  teamAWickets: wicketsSchema,
-  teamAOvers: numberSchema,
-  teamBName: z.string().min(2, 'Name must be at least 2 characters.'),
-  teamBScore: numberSchema,
-  teamBWickets: wicketsSchema,
-  teamBOvers: numberSchema,
-  status: z.string().min(10, 'Status must be at least 10 characters.'),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+const SubmitButton = () => {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? 'Saving...' : 'Save Match'}
+    </Button>
+  );
+};
 
 const defaultInitialData = {
   teamA: { name: '', score: 0, wickets: 0, overs: 0 },
@@ -75,39 +41,25 @@ export function EditMatchForm({
   initialData?: Omit<MatchData, 'id'>;
 }) {
   const { toast } = useToast();
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      id: matchId,
-      teamAName: initialData.teamA.name,
-      teamAScore: initialData.teamA.score,
-      teamAWickets: initialData.teamA.wickets,
-      teamAOvers: initialData.teamA.overs,
-      teamBName: initialData.teamB.name,
-      teamBScore: initialData.teamB.score,
-      teamBWickets: initialData.teamB.wickets,
-      teamBOvers: initialData.teamB.overs,
-      status: initialData.status,
-    },
-  });
+  const initialState: State = { message: null, errors: {} };
+  const [state, formAction] = useActionState(saveMatchData, initialState);
 
-  async function onSubmit(values: FormValues) {
-    const result = await saveMatchData(values);
-    if (result?.errors) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          result.errors._form?.join(', ') ||
-          'Failed to save match data. Please check the form for errors.',
-      });
-    } else {
-      toast({
-        title: 'Success',
-        description: 'Match data saved successfully.',
-      });
+  useEffect(() => {
+    if (state.message) {
+      if (state.errors) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: state.message,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Match data saved successfully.',
+        });
+      }
     }
-  }
+  }, [state, toast]);
 
   return (
     <Card className="mx-auto max-w-4xl">
@@ -117,155 +69,126 @@ export function EditMatchForm({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-primary">Team A</h3>
-              <FormField
-                control={form.control}
+        <form action={formAction} className="space-y-8">
+          <input type="hidden" name="id" value={matchId} />
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-primary">Team A</h3>
+            <div>
+              <Label htmlFor="teamAName">Team Name</Label>
+              <Input
+                id="teamAName"
                 name="teamAName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Team Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                defaultValue={initialData.teamA.name}
               />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
+               {state.errors?.teamAName && <p className="text-sm text-destructive">{state.errors.teamAName}</p>}
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <Label htmlFor="teamAScore">Score</Label>
+                <Input
+                  id="teamAScore"
                   name="teamAScore"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Score</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  type="number"
+                  defaultValue={initialData.teamA.score}
                 />
-                <FormField
-                  control={form.control}
+                 {state.errors?.teamAScore && <p className="text-sm text-destructive">{state.errors.teamAScore}</p>}
+              </div>
+              <div>
+                <Label htmlFor="teamAWickets">Wickets</Label>
+                <Input
+                  id="teamAWickets"
                   name="teamAWickets"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Wickets</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  type="number"
+                  defaultValue={initialData.teamA.wickets}
                 />
-                <FormField
-                  control={form.control}
+                {state.errors?.teamAWickets && <p className="text-sm text-destructive">{state.errors.teamAWickets}</p>}
+              </div>
+              <div>
+                <Label htmlFor="teamAOvers">Overs</Label>
+                <Input
+                  id="teamAOvers"
                   name="teamAOvers"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Overs</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  type="number"
+                  step="0.1"
+                  defaultValue={initialData.teamA.overs}
                 />
+                 {state.errors?.teamAOvers && <p className="text-sm text-destructive">{state.errors.teamAOvers}</p>}
               </div>
             </div>
+          </div>
 
-            <Separator />
+          <Separator />
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-primary">Team B</h3>
-              <FormField
-                control={form.control}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-primary">Team B</h3>
+             <div>
+              <Label htmlFor="teamBName">Team Name</Label>
+              <Input
+                id="teamBName"
                 name="teamBName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Team Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                defaultValue={initialData.teamB.name}
               />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
+               {state.errors?.teamBName && <p className="text-sm text-destructive">{state.errors.teamBName}</p>}
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <Label htmlFor="teamBScore">Score</Label>
+                <Input
+                  id="teamBScore"
                   name="teamBScore"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Score</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  type="number"
+                  defaultValue={initialData.teamB.score}
                 />
-                <FormField
-                  control={form.control}
+                {state.errors?.teamBScore && <p className="text-sm text-destructive">{state.errors.teamBScore}</p>}
+              </div>
+              <div>
+                <Label htmlFor="teamBWickets">Wickets</Label>
+                <Input
+                  id="teamBWickets"
                   name="teamBWickets"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Wickets</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  type="number"
+                  defaultValue={initialData.teamB.wickets}
                 />
-                <FormField
-                  control={form.control}
+                 {state.errors?.teamBWickets && <p className="text-sm text-destructive">{state.errors.teamBWickets}</p>}
+              </div>
+              <div>
+                <Label htmlFor="teamBOvers">Overs</Label>
+                <Input
+                  id="teamBOvers"
                   name="teamBOvers"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Overs</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  type="number"
+                  step="0.1"
+                  defaultValue={initialData.teamB.overs}
                 />
+                 {state.errors?.teamBOvers && <p className="text-sm text-destructive">{state.errors.teamBOvers}</p>}
               </div>
             </div>
+          </div>
 
-            <Separator />
-
-            <FormField
-              control={form.control}
+          <Separator />
+          <div>
+            <Label htmlFor="status">Match Status</Label>
+            <Textarea
+              id="status"
               name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Match Status</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    A short summary of the current match situation.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+              defaultValue={initialData.status}
             />
+            <p className="text-sm text-muted-foreground">
+              A short summary of the current match situation.
+            </p>
+             {state.errors?.status && <p className="text-sm text-destructive">{state.errors.status}</p>}
+          </div>
+          
+           {state.errors?._form && <p className="text-sm text-destructive">{state.errors._form}</p>}
 
-            <div className="flex gap-4">
-               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Saving...' : 'Save Match'}
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/admin">Cancel</Link>
-              </Button>
-            </div>
-          </form>
-        </Form>
+
+          <div className="flex gap-4">
+            <SubmitButton />
+            <Button variant="outline" asChild>
+              <Link href="/admin">Cancel</Link>
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
   );
