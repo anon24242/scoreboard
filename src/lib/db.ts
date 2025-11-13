@@ -18,7 +18,7 @@ let matches: MatchData[] = [
       wickets: 8,
       overs: 17.0,
     },
-    status: 'IND needs 15 runs in 4 balls to win.',
+    status: 'IND won by 65 runs.',
   },
 ];
 
@@ -58,4 +58,11 @@ export async function addMatch(
   revalidatePath('/');
   revalidatePath('/admin');
   return Promise.resolve(newMatch);
+}
+
+export async function replaceMatches(newMatches: MatchData[]): Promise<void> {
+  matches = newMatches;
+  revalidatePath('/');
+  revalidatePath('/admin');
+  return Promise.resolve();
 }

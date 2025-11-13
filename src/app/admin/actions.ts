@@ -1,9 +1,11 @@
 'use server';
 
 import { z } from 'zod';
-import { updateMatch, addMatch, getMatchById } from '@/lib/db';
+import { updateMatch, addMatch, getMatchById, replaceMatches } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { MatchData } from '@/lib/types';
+
 
 const numberSchema = z.preprocess(
   (val) => (val === '' ? undefined : parseFloat(String(val))),
@@ -142,4 +144,44 @@ export async function liveUpdate(matchId: string, team: 'teamA' | 'teamB', field
   revalidatePath(`/admin/live/${matchId}`);
   revalidatePath('/');
   return { success: true };
+}
+
+const TeamScoreSchema = z.object({
+    name: z.string(),
+    score: z.number(),
+    wickets: z.number(),
+    overs: z.number(),
+});
+
+const MatchDataSchema = z.object({
+    id: z.string(),
+    teamA: TeamScoreSchema,
+    teamB: TeamScoreSchema,
+    status: z.string(),
+});
+
+const MatchesArraySchema = z.array(MatchDataSchema);
+
+
+export async function importMatchesFromJson(jsonContent: string) {
+  try {
+    const data = JSON.parse(jsonContent);
+    const validatedData = MatchesArraySchema.safeParse(data);
+
+    if (!validatedData.success) {
+      console.error(validatedData.error);
+      return { success: false, message: 'Invalid JSON structure.' };
+    }
+    
+    await replaceMatches(validatedData.data as MatchData[]);
+    
+    revalidatePath('/admin');
+    revalidatePath('/');
+    
+    return { success: true, message: 'Data imported successfully!' };
+  } catch (error) {
+    console.error(error);
+    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return { success: false, message: `Failed to import data: ${message}` };
+  }
 }
