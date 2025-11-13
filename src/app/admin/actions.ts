@@ -12,13 +12,11 @@ const numberSchema = z.preprocess(
     .nonnegative('Must be a positive number')
 );
 
-const wicketsSchema = z.preprocess(
-  (val) => (val === '' ? undefined : parseFloat(String(val))),
-  z
-    .number({ invalid_type_error: 'Must be a number' })
-    .nonnegative('Must be a positive number')
-    .max(10, 'Wickets cannot exceed 10')
+const wicketsSchema = numberSchema.refine(
+  (val) => val <= 10,
+  { message: 'Wickets cannot exceed 10' }
 );
+
 
 const MatchFormSchema = z.object({
   id: z.string().optional(),
@@ -122,10 +120,12 @@ export async function liveUpdate(matchId: string, team: 'teamA' | 'teamB', field
       const integerPart = Math.floor(currentOvers);
       const decimalPart = Math.round((currentOvers - integerPart) * 10);
       
-      if (decimalPart + 1 > 5) {
+      if (delta > 0 && decimalPart + 1 > 5) {
           teamData.overs = integerPart + 1;
+      } else if (delta < 0 && decimalPart - 1 < 0) {
+          teamData.overs = Math.max(0, integerPart - 1 + 0.5);
       } else {
-          teamData.overs = parseFloat((integerPart + (decimalPart + 1) / 10).toFixed(1));
+          teamData.overs = parseFloat((currentOvers + delta).toFixed(1));
       }
   } else {
     teamData[field] += delta;
@@ -135,6 +135,7 @@ export async function liveUpdate(matchId: string, team: 'teamA' | 'teamB', field
   if (teamData.wickets > 10) teamData.wickets = 10;
   if (teamData.wickets < 0) teamData.wickets = 0;
   if (teamData.score < 0) teamData.score = 0;
+  if (teamData.overs < 0) teamData.overs = 0;
   
   await updateMatch(matchId, match);
 

@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { logout } from '@/app/login/actions';
 import { useAuth } from '@/hooks/use-auth';
+import { CricketBatIcon } from './cricket-icons';
 
 const Logo = () => (
   <Link href="/" className="flex items-center gap-2" aria-label="Cricket Central Home">
+    <CricketBatIcon className="h-6 w-6 text-primary" />
     <span className="text-xl font-bold tracking-tight text-primary">
       Cricket Central
     </span>
@@ -21,11 +23,8 @@ export function Header() {
 
   const navItems = [
     { href: '/', label: 'Scoreboard' },
+    ...(isAuthenticated ? [{ href: '/admin', label: 'Admin' }] : []),
   ];
-
-  if (isAuthenticated) {
-    navItems.push({ href: '/admin', label: 'Admin' });
-  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,7 +38,7 @@ export function Header() {
               variant="ghost"
               className={cn(
                 'text-sm font-medium',
-                pathname === item.href
+                pathname?.startsWith(item.href) && item.href !== '/' || pathname === item.href
                   ? 'text-primary'
                   : 'text-muted-foreground'
               )}

@@ -53,7 +53,7 @@ export const LiveUpdateActions = ({ matchId, team }: LiveUpdateActionsProps) => 
         variant="outline"
         className="col-span-2"
       >
-        +0.1 Overs
+        +1 Ball
       </Button>
        <Button
         onClick={() => handleUpdate('score', -1)}
