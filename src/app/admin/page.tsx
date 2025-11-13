@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Radio } from 'lucide-react';
 
 export default async function AdminPage() {
   const matches = await getMatches();
@@ -30,8 +30,7 @@ export default async function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Team A</TableHead>
-                <TableHead>Team B</TableHead>
+                <TableHead>Teams</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -40,13 +39,20 @@ export default async function AdminPage() {
               {matches.map((match) => (
                 <TableRow key={match.id}>
                   <TableCell>
-                    {match.teamA.name} ({match.teamA.score}/{match.teamA.wickets})
-                  </TableCell>
-                  <TableCell>
-                    {match.teamB.name} ({match.teamB.score}/{match.teamB.wickets})
+                    <div className='font-medium'>{match.teamA.name} vs {match.teamB.name}</div>
+                    <div className='text-sm text-muted-foreground'>
+                        {match.teamA.name}: {match.teamA.score}/{match.teamA.wickets} ({match.teamA.overs})
+                        <br/>
+                        {match.teamB.name}: {match.teamB.score}/{match.teamB.wickets} ({match.teamB.overs})
+                    </div>
                   </TableCell>
                   <TableCell>{match.status}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                     <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/live/${match.id}`}>
+                        <Radio className='mr-2 h-4 w-4'/> Live Update
+                      </Link>
+                    </Button>
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/admin/edit/${match.id}`}>Edit</Link>
                     </Button>

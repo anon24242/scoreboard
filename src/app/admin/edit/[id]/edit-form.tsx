@@ -46,7 +46,7 @@ export function EditMatchForm({
 
   useEffect(() => {
     if (state.message) {
-      if (state.errors) {
+      if (state.errors && Object.keys(state.errors).length > 0) {
         toast({
           variant: 'destructive',
           title: 'Error',
@@ -167,14 +167,14 @@ export function EditMatchForm({
 
           <Separator />
           <div>
-            <Label htmlFor="status">Match Status</Label>
+            <Label htmlFor="status">Match Status (Optional)</Label>
             <Textarea
               id="status"
               name="status"
               defaultValue={initialData.status}
             />
             <p className="text-sm text-muted-foreground">
-              A short summary of the current match situation.
+              A short summary of the current match situation. If left blank, it will be auto-generated.
             </p>
              {state.errors?.status && <p className="text-sm text-destructive">{state.errors.status}</p>}
           </div>

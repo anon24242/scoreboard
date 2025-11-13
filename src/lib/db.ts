@@ -39,10 +39,11 @@ export async function updateMatch(
   if (matchIndex === -1) {
     throw new Error('Match not found');
   }
-  matches[matchIndex] = { ...matches[matchIndex], ...data };
+  matches[matchIndex] = { ...matches[matchIndex], ...data, id: id };
   revalidatePath('/');
   revalidatePath(`/admin`);
   revalidatePath(`/admin/edit/${id}`);
+  revalidatePath(`/admin/live/${id}`);
   return Promise.resolve(matches[matchIndex]);
 }
 

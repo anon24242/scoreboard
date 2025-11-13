@@ -1,9 +1,10 @@
 'use server';
 
 import { z } from 'zod';
-import { updateMatch, addMatch } from '@/lib/db';
+import { updateMatch, addMatch, getMatchById } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { generateMatchStatus } from '@/ai/flows/generate-match-status';
 
 const numberSchema = z.preprocess(
   (val) => (val === '' ? undefined : parseFloat(String(val))),
@@ -30,7 +31,7 @@ const MatchFormSchema = z.object({
   teamBScore: numberSchema,
   teamBWickets: wicketsSchema,
   teamBOvers: numberSchema,
-  status: z.string().min(1, 'Status is required'),
+  status: z.string().optional(), // Status is now optional
 });
 
 export type State = {
@@ -88,8 +89,17 @@ export async function saveMatchData(prevState: State, formData: FormData) {
       wickets: data.teamBWickets,
       overs: data.teamBOvers,
     },
-    status: data.status,
+    status: data.status || '',
   };
+
+  // Generate status if it's empty
+  if (!matchPayload.status) {
+      matchPayload.status = await generateMatchStatus({
+          teamA: matchPayload.teamA,
+          teamB: matchPayload.teamB,
+      });
+  }
+
 
   try {
     if (data.id && data.id !== 'new') {
@@ -105,5 +115,48 @@ export async function saveMatchData(prevState: State, formData: FormData) {
   }
 
   revalidatePath('/admin');
+  revalidatePath('/');
   redirect('/admin');
+}
+
+
+export async function liveUpdate(matchId: string, team: 'teamA' | 'teamB', field: 'score' | 'wickets' | 'overs', delta: number) {
+  const match = await getMatchById(matchId);
+  if (!match) {
+    return { error: 'Match not found' };
+  }
+
+  const teamData = match[team];
+  if (field === 'overs') {
+      const currentOvers = teamData.overs;
+      const integerPart = Math.floor(currentOvers);
+      const decimalPart = Math.round((currentOvers - integerPart) * 10);
+      
+      if (decimalPart + 1 > 5) {
+          teamData.overs = integerPart + 1;
+      } else {
+          teamData.overs = parseFloat((integerPart + (decimalPart + 1) / 10).toFixed(1));
+      }
+  } else {
+    teamData[field] += delta;
+  }
+  
+
+  if (teamData.wickets > 10) teamData.wickets = 10;
+  if (teamData.wickets < 0) teamData.wickets = 0;
+  if (teamData.score < 0) teamData.score = 0;
+  
+
+  const newStatus = await generateMatchStatus({
+    teamA: match.teamA,
+    teamB: match.teamB,
+  });
+
+  match.status = newStatus;
+
+  await updateMatch(matchId, match);
+
+  revalidatePath(`/admin/live/${matchId}`);
+  revalidatePath('/');
+  return { success: true };
 }
