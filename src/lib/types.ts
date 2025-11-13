@@ -6,10 +6,8 @@ export interface TeamScore {
 }
 
 export interface MatchData {
+  id: string;
   teamA: TeamScore;
   teamB: TeamScore;
-  striker: string;
-  nonStriker: string;
-  bowler: string;
   status: string;
 }

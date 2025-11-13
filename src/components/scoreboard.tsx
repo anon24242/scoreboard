@@ -7,8 +7,7 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { MatchData, TeamScore } from '@/lib/types';
-import { Shield, User, Zap } from 'lucide-react';
-import { CricketBallIcon, CricketBatIcon } from './cricket-icons';
+import { Shield, Zap } from 'lucide-react';
 
 const TeamScoreDisplay = ({ name, score, wickets, overs }: TeamScore) => (
   <div className="flex flex-wrap items-center justify-between gap-4">
@@ -26,6 +25,14 @@ const TeamScoreDisplay = ({ name, score, wickets, overs }: TeamScore) => (
 );
 
 export function Scoreboard({ data }: { data: MatchData }) {
+  if (!data) {
+    return (
+      <div className="container mx-auto py-8">
+        <p>No match data available.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8">
       <Card className="mx-auto max-w-4xl overflow-hidden shadow-2xl bg-card/80 backdrop-blur-sm">
@@ -46,29 +53,6 @@ export function Scoreboard({ data }: { data: MatchData }) {
             <TeamScoreDisplay {...data.teamB} />
           </div>
           <Separator />
-          <div className="grid grid-cols-1 gap-4 text-center md:grid-cols-3">
-            <div className="flex flex-col items-center gap-2 rounded-lg bg-background p-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <CricketBatIcon className="h-5 w-5" />
-                <span>Striker</span>
-              </div>
-              <p className="text-lg font-bold">{data.striker}</p>
-            </div>
-            <div className="flex flex-col items-center gap-2 rounded-lg bg-background p-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <User className="h-5 w-5" />
-                <span>Non-Striker</span>
-              </div>
-              <p className="text-lg font-bold">{data.nonStriker}</p>
-            </div>
-            <div className="flex flex-col items-center gap-2 rounded-lg bg-background p-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <CricketBallIcon className="h-5 w-5" />
-                <span>Bowler</span>
-              </div>
-              <p className="text-lg font-bold">{data.bowler}</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

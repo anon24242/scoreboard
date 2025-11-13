@@ -1,8 +1,10 @@
 'use server';
 
 import { z } from 'zod';
-import { updateMatchData as dbUpdateMatchData } from '@/lib/db';
+import { updateMatch, addMatch } from '@/lib/db';
 import type { MatchData } from '@/lib/types';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 const numberSchema = z.preprocess(
   (val) => (val === '' ? undefined : parseFloat(String(val))),
@@ -20,6 +22,7 @@ const wicketsSchema = z.preprocess(
 );
 
 const MatchFormSchema = z.object({
+  id: z.string().optional(),
   teamAName: z.string().min(1, 'Team A name is required'),
   teamAScore: numberSchema,
   teamAWickets: wicketsSchema,
@@ -28,13 +31,10 @@ const MatchFormSchema = z.object({
   teamBScore: numberSchema,
   teamBWickets: wicketsSchema,
   teamBOvers: numberSchema,
-  striker: z.string().min(1, 'Striker name is required'),
-  nonStriker: z.string().min(1, 'Non-striker name is required'),
-  bowler: z.string().min(1, 'Bowler name is required'),
   status: z.string().min(1, 'Status is required'),
 });
 
-export async function updateMatchData(formData: unknown) {
+export async function saveMatchData(formData: unknown) {
   const validatedFields = MatchFormSchema.safeParse(formData);
 
   if (!validatedFields.success) {
@@ -46,7 +46,7 @@ export async function updateMatchData(formData: unknown) {
 
   const { data } = validatedFields;
 
-  const newMatchData: MatchData = {
+  const matchPayload = {
     teamA: {
       name: data.teamAName,
       score: data.teamAScore,
@@ -59,16 +59,19 @@ export async function updateMatchData(formData: unknown) {
       wickets: data.teamBWickets,
       overs: data.teamBOvers,
     },
-    striker: data.striker,
-    nonStriker: data.nonStriker,
-    bowler: data.bowler,
     status: data.status,
   };
 
   try {
-    await dbUpdateMatchData(newMatchData);
-    return { success: true };
+    if (data.id && data.id !== 'new') {
+      await updateMatch(data.id, matchPayload);
+    } else {
+      await addMatch(matchPayload);
+    }
   } catch (error) {
-    return { errors: { _form: ['Failed to update match data.'] } };
+    return { errors: { _form: ['Failed to save match data.'] } };
   }
+
+  revalidatePath('/admin');
+  redirect('/admin');
 }

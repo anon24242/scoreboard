@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { MatchData } from '@/lib/types';
-import { updateMatchData } from './actions';
+import { saveMatchData } from '../../actions';
 import {
   Card,
   CardContent,
@@ -31,6 +31,8 @@ const numberSchema = z.preprocess(
   z
     .number({ invalid_type_error: 'Must be a number' })
     .nonnegative('Must be a positive number')
+    .optional()
+    .default(0)
 );
 
 const wicketsSchema = z.preprocess(
@@ -38,10 +40,13 @@ const wicketsSchema = z.preprocess(
   z
     .number({ invalid_type_error: 'Must be a number' })
     .nonnegative('Must be a positive number')
-    .max(10)
+    .max(10, 'Wickets cannot exceed 10')
+    .optional()
+    .default(0)
 );
 
 const formSchema = z.object({
+  id: z.string().optional(),
   teamAName: z.string().min(2, 'Name must be at least 2 characters.'),
   teamAScore: numberSchema,
   teamAWickets: wicketsSchema,
@@ -50,19 +55,29 @@ const formSchema = z.object({
   teamBScore: numberSchema,
   teamBWickets: wicketsSchema,
   teamBOvers: numberSchema,
-  striker: z.string().min(2, 'Name must be at least 2 characters.'),
-  nonStriker: z.string().min(2, 'Name must be at least 2 characters.'),
-  bowler: z.string().min(2, 'Name must be at least 2 characters.'),
   status: z.string().min(10, 'Status must be at least 10 characters.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function UpdateMatchForm({ initialData }: { initialData: MatchData }) {
+const defaultInitialData = {
+  teamA: { name: '', score: 0, wickets: 0, overs: 0 },
+  teamB: { name: '', score: 0, wickets: 0, overs: 0 },
+  status: '',
+};
+
+export function EditMatchForm({
+  matchId,
+  initialData = defaultInitialData,
+}: {
+  matchId: string;
+  initialData?: Omit<MatchData, 'id'>;
+}) {
   const { toast } = useToast();
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      id: matchId,
       teamAName: initialData.teamA.name,
       teamAScore: initialData.teamA.score,
       teamAWickets: initialData.teamA.wickets,
@@ -71,25 +86,24 @@ export function UpdateMatchForm({ initialData }: { initialData: MatchData }) {
       teamBScore: initialData.teamB.score,
       teamBWickets: initialData.teamB.wickets,
       teamBOvers: initialData.teamB.overs,
-      striker: initialData.striker,
-      nonStriker: initialData.nonStriker,
-      bowler: initialData.bowler,
       status: initialData.status,
     },
   });
 
   async function onSubmit(values: FormValues) {
-    const result = await updateMatchData(values);
-    if (result?.success) {
-      toast({
-        title: 'Success',
-        description: 'Match data updated successfully.',
-      });
-    } else {
+    const result = await saveMatchData(values);
+    if (result?.errors) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to update match data. Please check the form for errors.',
+        description:
+          result.errors._form?.join(', ') ||
+          'Failed to save match data. Please check the form for errors.',
+      });
+    } else {
+      toast({
+        title: 'Success',
+        description: 'Match data saved successfully.',
       });
     }
   }
@@ -97,7 +111,9 @@ export function UpdateMatchForm({ initialData }: { initialData: MatchData }) {
   return (
     <Card className="mx-auto max-w-4xl">
       <CardHeader>
-        <CardTitle>Update Match Data</CardTitle>
+        <CardTitle>
+          {matchId === 'new' ? 'Add New Match' : 'Edit Match'}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -222,53 +238,6 @@ export function UpdateMatchForm({ initialData }: { initialData: MatchData }) {
 
             <Separator />
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-primary">Current Players</h3>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="striker"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Striker</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="nonStriker"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Non-Striker</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="bowler"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bowler</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
             <FormField
               control={form.control}
               name="status"
@@ -282,15 +251,19 @@ export function UpdateMatchForm({ initialData }: { initialData: MatchData }) {
                     A short summary of the current match situation.
                   </FormDescription>
                   <FormMessage />
-                </FormItem>
+                </I
+                  </FormItem>
               )}
             />
 
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting
-                ? 'Updating...'
-                : 'Update Scoreboard'}
-            </Button>
+            <div className="flex gap-4">
+               <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Saving...' : 'Save Match'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/admin">Cancel</Link>
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

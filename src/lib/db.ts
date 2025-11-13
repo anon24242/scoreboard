@@ -3,35 +3,58 @@ import { revalidatePath } from 'next/cache';
 
 // This is a simple in-memory store.
 // In a real application, you would use a database like Firestore.
-let matchData: MatchData = {
-  teamA: {
-    name: 'IND',
-    score: 185,
-    wickets: 5,
-    overs: 19.2,
+let matches: MatchData[] = [
+  {
+    id: 'match1',
+    teamA: {
+      name: 'IND',
+      score: 185,
+      wickets: 5,
+      overs: 19.2,
+    },
+    teamB: {
+      name: 'AUS',
+      score: 120,
+      wickets: 8,
+      overs: 17.0,
+    },
+    status: 'IND needs 15 runs in 4 balls to win.',
   },
-  teamB: {
-    name: 'AUS',
-    score: 120,
-    wickets: 8,
-    overs: 17.0,
-  },
-  striker: 'V. Kohli',
-  nonStriker: 'H. Pandya',
-  bowler: 'P. Cummins',
-  status: 'IND needs 15 runs in 4 balls to win.',
-};
+];
 
-export async function getMatchData(): Promise<MatchData> {
+export async function getMatches(): Promise<MatchData[]> {
   // Simulate async database operation
-  return Promise.resolve(matchData);
+  return Promise.resolve(matches);
 }
 
-export async function updateMatchData(data: MatchData): Promise<MatchData> {
-  // Simulate async database operation
-  matchData = data;
-  // Revalidate paths to reflect changes across the app
+export async function getMatchById(id: string): Promise<MatchData | undefined> {
+  return Promise.resolve(matches.find((m) => m.id === id));
+}
+
+export async function updateMatch(
+  id: string,
+  data: Omit<MatchData, 'id'>
+): Promise<MatchData> {
+  const matchIndex = matches.findIndex((m) => m.id === id);
+  if (matchIndex === -1) {
+    throw new Error('Match not found');
+  }
+  matches[matchIndex] = { ...matches[matchIndex], ...data };
+  revalidatePath('/');
+  revalidatePath(`/admin`);
+  revalidatePath(`/admin/edit/${id}`);
+  return Promise.resolve(matches[matchIndex]);
+}
+
+export async function addMatch(
+  data: Omit<MatchData, 'id'>
+): Promise<MatchData> {
+  const newMatch: MatchData = {
+    id: `match${Date.now()}`,
+    ...data,
+  };
+  matches.push(newMatch);
   revalidatePath('/');
   revalidatePath('/admin');
-  return Promise.resolve(matchData);
+  return Promise.resolve(newMatch);
 }

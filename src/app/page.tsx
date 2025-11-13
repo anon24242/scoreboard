@@ -1,7 +1,9 @@
 import { Scoreboard } from '@/components/scoreboard';
-import { getMatchData } from '@/lib/db';
+import { getMatches } from '@/lib/db';
 
 export default async function Home() {
-  const matchData = await getMatchData();
+  const matches = await getMatches();
+  // For now, display the first match on the homepage
+  const matchData = matches[0];
   return <Scoreboard data={matchData} />;
 }
