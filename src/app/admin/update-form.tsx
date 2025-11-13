@@ -33,14 +33,22 @@ const numberSchema = z.preprocess(
     .nonnegative('Must be a positive number')
 );
 
+const wicketsSchema = z.preprocess(
+  (val) => (val === '' ? undefined : parseFloat(String(val))),
+  z
+    .number({ invalid_type_error: 'Must be a number' })
+    .nonnegative('Must be a positive number')
+    .max(10)
+);
+
 const formSchema = z.object({
   teamAName: z.string().min(2, 'Name must be at least 2 characters.'),
   teamAScore: numberSchema,
-  teamAWickets: numberSchema.max(10),
+  teamAWickets: wicketsSchema,
   teamAOvers: numberSchema,
   teamBName: z.string().min(2, 'Name must be at least 2 characters.'),
   teamBScore: numberSchema,
-  teamBWickets: numberSchema.max(10),
+  teamBWickets: wicketsSchema,
   teamBOvers: numberSchema,
   striker: z.string().min(2, 'Name must be at least 2 characters.'),
   nonStriker: z.string().min(2, 'Name must be at least 2 characters.'),

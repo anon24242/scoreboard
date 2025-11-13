@@ -11,7 +11,13 @@ const numberSchema = z.preprocess(
     .nonnegative('Must be a positive number')
 );
 
-const wicketsSchema = numberSchema.max(10, 'Wickets cannot exceed 10');
+const wicketsSchema = z.preprocess(
+  (val) => (val === '' ? undefined : parseFloat(String(val))),
+  z
+    .number({ invalid_type_error: 'Must be a number' })
+    .nonnegative('Must be a positive number')
+    .max(10, 'Wickets cannot exceed 10')
+);
 
 const MatchFormSchema = z.object({
   teamAName: z.string().min(1, 'Team A name is required'),
